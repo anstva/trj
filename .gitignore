@@ -35,6 +35,8 @@
 *.i*86
 *.x86_64
 *.hex
+trj
+test_sha256
 
 # Debug files
 *.dSYM/
