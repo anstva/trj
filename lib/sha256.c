@@ -107,3 +107,70 @@ static inline uint32_t swap32(uint32_t b)
 #endif
 }
 
+void sha256_native(const uint32_t *message, uint32_t *digest)
+{
+    uint32_t W[64];
+    uint32_t i;
+
+    W[0] = load_be32((const char *)message, 0);
+    W[1] = load_be32((const char *)message, 4);
+    W[2] = load_be32((const char *)message, 8);
+    W[3] = load_be32((const char *)message, 12);
+    W[4] = load_be32((const char *)message, 16);
+    W[5] = load_be32((const char *)message, 20);
+    W[6] = load_be32((const char *)message, 24);
+    W[7] = load_be32((const char *)message, 28);
+
+    W[8]  = 0x80000000U;
+    W[9]  = 0U;
+    W[10] = 0U;
+    W[11] = 0U;
+    W[12] = 0U;
+    W[13] = 0U;
+    W[14] = 0U;
+    W[15] = 256U;
+
+    for (i = 16; i < 64; ++i)
+    {
+        uint32_t s0 = rotl32(W[i - 15],  (uint32_t)(32 - 7)) ^ rotl32(W[i - 15], (uint32_t)(32 - 18)) ^ (W[i - 15] >>  3);
+        uint32_t s1 = rotl32(W[i -  2], (uint32_t)(32 - 17)) ^ rotl32(W[i -  2], (uint32_t)(32 - 19)) ^ (W[i -  2] >> 10);
+        W[i] = W[i - 16] + s0 + W[i - 7] + s1;
+    }
+
+    uint32_t a = H_0[0];
+    uint32_t b = H_0[1];
+    uint32_t c = H_0[2];
+    uint32_t d = H_0[3];
+    uint32_t e = H_0[4];
+    uint32_t f = H_0[5];
+    uint32_t g = H_0[6];
+    uint32_t h = H_0[7];
+
+    for (i = 0; i < 64; ++i)
+    {
+        uint32_t S1 = rotl32(e, (uint32_t)(32 - 6)) ^ rotl32(e, (uint32_t)(32 - 11)) ^ rotl32(e, (uint32_t)(32 - 25));
+        uint32_t ch = (e & f) ^ (~e & g);
+        uint32_t temporary1 = h + S1 + ch + K[i] + W[i];
+        uint32_t S0 = rotl32(a, (uint32_t)(32 - 2)) ^ rotl32(a, (uint32_t)(32 - 13)) ^ rotl32(a, (uint32_t)(32 - 22));
+        uint32_t major = (a & b) ^ (a & c) ^ (b & c);
+        uint32_t temporary2 = S0 + major;
+
+        h = g;
+        g = f;
+        f = e;
+        e = d + temporary1;
+        d = c;
+        c = b;
+        b = a;
+        a = temporary1 + temporary2;
+
+        digest[0] = H_0[0] + a;
+        digest[1] = H_0[1] + b;
+        digest[2] = H_0[2] + c;
+        digest[3] = H_0[3] + d;
+        digest[4] = H_0[4] + e;
+        digest[5] = H_0[5] + f;
+        digest[6] = H_0[6] + g;
+        digest[7] = H_0[7] + h;
+    }
+}
