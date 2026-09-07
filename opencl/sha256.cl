@@ -86,11 +86,6 @@ inline uint load_be32(__global const uchar *p, int offset)
             (uint)p[offset + 3];
 }
 
-inline uint swap32(uint b)
-{
-    return rotate(b & 0x00FF00FFU, 24U) | rotate(b & 0xFF00FF00U, 8U);
-}
-
 __kernel void sha256_ocl_kernel(__global const uint *message, __global uint *digest)
 {
     size_t gid = get_global_id(0);
