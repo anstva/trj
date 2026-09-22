@@ -5,6 +5,6 @@
 
 #include "topology.h"
 
-void run_search(size_t search_space[], Topology *argtopo);
+void run_search(Topology *argtopo);
 
 #endif

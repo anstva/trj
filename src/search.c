@@ -4,10 +4,11 @@
 #include "search.h"
 #include "topology.h"
 
-#define ALPHABETIC_COMPONENT 'A'
-#define NUMERIC_COMPONENT    '0'
-#define SPECIAL_COMPONENT    'X'
-#define UNIVERSAL_COMPONENT  '*'
+#define ALPHABETIC_COMPONENT   'A'
+#define NUMERIC_COMPONENT      '0'
+#define SPECIAL_COMPONENT      'X'
+#define UNIVERSAL_COMPONENT    '*'
+#define ESCAPE_QUOTE_COMPONENT '"'
 
 #define ALPHABETIC_SET_SIZE 52
 #define NUMERIC_SET_SIZE    10
@@ -73,27 +74,73 @@ void build_search_space(size_t search_space[], const Topology *argtopo)
     }
 }
 
-void run_search(size_t search_space[], Topology *argtopo)
+void run_search(Topology *argtopo)
 {
     size_t topology_len = argtopo->len;
 
-    size_t working_search_space[topology_len];
+    size_t working_search_space[topology_len] = {};
     build_search_space(working_search_space, argtopo);
 
-    size_t counter_array[topology_len];
+    size_t counter_array[topology_len] = {};
     size_t counter_last_index = topology_len - 1;
+
     for (;;)
     {
-        if (counter_last_index > 0 && counter_array[counter_last_index] == 0)
-        {
-            counter_last_index = counter_last_index - 1;
-        }
-        else 
+        if (counter_last_index <= 0 || working_search_space[counter_last_index] != 0)
         {
             break;
         }
+
+        counter_last_index = counter_last_index - 1;
     }
 
-    char current_prediction[32];
+    char current_prediction[topology_len];
+    current_prediction[topology_len] = '\0';
+    for (;;)
+    {
+        if (counter_array[counter_last_index] >= working_search_space[counter_last_index])
+        {
+            break;
+        }
+        for (size_t prune_index = 0; prune_index < topology_len; ++prune_index)
+        {
+            char current_token = argtopo->data[prune_index][0];
+            switch (current_token)
+            {
+                case ALPHABETIC_COMPONENT:
+                    current_prediction[prune_index] = ALPHABETIC_SET[counter_array[prune_index]];
+                    break;
+                case NUMERIC_COMPONENT:
+                    current_prediction[prune_index] = NUMERIC_SET[counter_array[prune_index]];
+                    break;
+                case SPECIAL_COMPONENT:
+                    current_prediction[prune_index] = SPECIAL_SET[counter_array[prune_index]];
+                    break;
+                case UNIVERSAL_COMPONENT:
+                    current_prediction[prune_index] = UNIVERSAL_SET[counter_array[prune_index]];
+                    break;
+                case ESCAPE_QUOTE_COMPONENT:
+                    char next_character = argtopo->data[prune_index][0];
+                    if (next_character == ESCAPE_QUOTE_COMPONENT)
+                    {
+                        current_prediction[prune_index] = next_character;
+                    }
+                    break;
+            }
+        }
 
+        counter_array[0] = counter_array[0] + 1;
+        for (size_t rollover_index = 0; rollover_index < counter_last_index; ++rollover_index)
+        {
+            if (counter_array[rollover_index] >= working_search_space[rollover_index])
+            {
+                counter_array[rollover_index] = 0;
+                counter_array[rollover_index + 1] = counter_array[rollover_index + 1] + 1;
+            }
+        }
+
+        /*
+         * TODO: launch GPU jobs for each candidate
+         */
+    }
 }
