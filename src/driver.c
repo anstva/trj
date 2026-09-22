@@ -4,6 +4,7 @@
 
 #include "driver.h"
 #include "topology.h"
+#include "search.h"
 
 int init_trj(Options opt)
 {
@@ -24,6 +25,8 @@ int init_trj(Options opt)
             fprintf(stdout, "pattern data[%zu]: %*s\n", i, string_padding, target_topology.data[i]);
         }
     }
+
+    run_search(&target_topology);
 
     return 0;
 }
