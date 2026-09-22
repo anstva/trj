@@ -1,5 +1,5 @@
 CC := clang
-CFLAGS ?= -g -Wall -Wextra
+CFLAGS ?= -g -Wall -Wextra -std=c23
 CPPFLAGS ?= -DCL_TARGET_OPENCL_VERSION=300
 CPPFLAGS += -MMD -MP
 LDFLAGS ?=
