@@ -10,7 +10,6 @@ int init_trj(Options opt)
 {
     if (opt.verbose == 1) 
     {
-        fprintf(stdout, "Verbosity: %d\n", opt.verbose);
         fprintf(stdout, "Incoming pattern: %s\n", opt.pattern);
     }
 

@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #define CL_TARGET_OPENCL_VERSION 300
 #include <CL/cl.h>
 #include <stdio.h>
@@ -194,9 +195,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Create Kernel
-    cl_kernel kernel = clCreateKernel(prog, "sha256_native_kernel", &err);
+    cl_kernel kernel = clCreateKernel(prog, "sha256_ocl_kernel", &err);
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "Error: clCreateKernel('sha256_native_kernel') failed (%d)\n", err);
+        fprintf(stderr, "Error: clCreateKernel('sha256_ocl_kernel') failed (%d)\n", err);
         clReleaseProgram(prog);
         clReleaseCommandQueue(queue);
         clReleaseContext(ctx);

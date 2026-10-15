@@ -1,4 +1,6 @@
+#ifndef __OPENCL_VERSION__
 #include <stddef.h>
+#endif
 
 __constant uint H_0[8] = {
     0x6a09e667U,

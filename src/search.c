@@ -3,6 +3,7 @@
 
 #include "search.h"
 #include "topology.h"
+#include "gpu.h"
 
 #define ALPHABETIC_COMPONENT   'A'
 #define NUMERIC_COMPONENT      '0'
@@ -94,7 +95,13 @@ void run_search(Topology *argtopo)
         counter_last_index = counter_last_index - 1;
     }
 
-    char current_prediction[topology_len];
+    init_gpu(NULL);
+    uint8_t *batch_buffer = gpu_get_input_buffer();
+    size_t batch_count = 0;
+    const size_t batch_capacity = GPU_DEFAULT_GLOBAL_WORK_SIZE;
+    size_t copy_len = (topology_len > 32) ? 32 : topology_len;
+
+    char current_prediction[topology_len + 1];
     current_prediction[topology_len] = '\0';
     for (;;)
     {
@@ -129,6 +136,25 @@ void run_search(Topology *argtopo)
             }
         }
 
+        /* Populate distinct candidate in work-item slot */
+        if (batch_buffer)
+        {
+            uint8_t *slot = batch_buffer + batch_count * 32;
+            memset(slot, 0, 32);
+            memcpy(slot, current_prediction, copy_len);
+        }
+        batch_count++;
+
+        /*
+         * Launch GPU tasks in parallel when batch reaches global work size.
+         * Each work item evaluates a distinct candidate.
+         */
+        if (batch_count >= batch_capacity)
+        {
+            launch_gpu_batch(batch_buffer, batch_count, topology_len);
+            batch_count = 0;
+        }
+
         counter_array[0] = counter_array[0] + 1;
         for (size_t rollover_index = 0; rollover_index < counter_last_index; ++rollover_index)
         {
@@ -138,9 +164,15 @@ void run_search(Topology *argtopo)
                 counter_array[rollover_index + 1] = counter_array[rollover_index + 1] + 1;
             }
         }
+    }
 
-        /*
-         * TODO: launch GPU jobs for each candidate
-         */
+    /*
+     * Launch remaining distinct candidates in final batch.
+     * Each work item evaluates a distinct candidate.
+     */
+    if (batch_count > 0)
+    {
+        launch_gpu_batch(batch_buffer, batch_count, topology_len);
+        batch_count = 0;
     }
 }
