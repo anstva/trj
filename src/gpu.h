@@ -20,12 +20,12 @@
 extern int setenv(const char *name, const char *value, int overwrite);
 
 /*
- * GPU tasks default configuration:
+ * GPU tasks default configuration (RTX 3060 12GB)
  * Global work size: 1,048,576 (2^20) work items
  * Local work group size: 64 work items
  */
 #define GPU_DEFAULT_LOCAL_WORK_SIZE  64
-#define GPU_DEFAULT_GLOBAL_WORK_SIZE 1048576 /* 2^20 */
+#define GPU_DEFAULT_GLOBAL_WORK_SIZE 1048576
 
 #define DEFAULT_LOCAL_WORK_SIZE  GPU_DEFAULT_LOCAL_WORK_SIZE
 #define DEFAULT_GLOBAL_WORK_SIZE GPU_DEFAULT_GLOBAL_WORK_SIZE
@@ -54,155 +54,6 @@ typedef struct GpuContext
     size_t local_work_size;
     int is_initialized;
 } GpuContext;
-
-/* Embedded SHA256 OpenCL kernel source fallback */
-static const char * const GPU_SHA256_KERNEL_SRC =
-"__constant uint H_0[8] = {\n"
-"    0x6a09e667U,\n"
-"    0xbb67ae85U,\n"
-"    0x3c6ef372U,\n"
-"    0xa54ff53aU,\n"
-"    0x510e527fU,\n"
-"    0x9b05688cU,\n"
-"    0x1f83d9abU,\n"
-"    0x5be0cd19U\n"
-"};\n\n"
-"__constant uint K[64] = {\n"
-"    0x428a2f98U,\n"
-"    0x71374491U,\n"
-"    0xb5c0fbcfU,\n"
-"    0xe9b5dba5U,\n"
-"    0x3956c25bU,\n"
-"    0x59f111f1U,\n"
-"    0x923f82a4U,\n"
-"    0xab1c5ed5U,\n"
-"    0xd807aa98U,\n"
-"    0x12835b01U,\n"
-"    0x243185beU,\n"
-"    0x550c7dc3U,\n"
-"    0x72be5d74U,\n"
-"    0x80deb1feU,\n"
-"    0x9bdc06a7U,\n"
-"    0xc19bf174U,\n"
-"    0xe49b69c1U,\n"
-"    0xefbe4786U,\n"
-"    0x0fc19dc6U,\n"
-"    0x240ca1ccU,\n"
-"    0x2de92c6fU,\n"
-"    0x4a7484aaU,\n"
-"    0x5cb0a9dcU,\n"
-"    0x76f988daU,\n"
-"    0x983e5152U,\n"
-"    0xa831c66dU,\n"
-"    0xb00327c8U,\n"
-"    0xbf597fc7U,\n"
-"    0xc6e00bf3U,\n"
-"    0xd5a79147U,\n"
-"    0x06ca6351U,\n"
-"    0x14292967U,\n"
-"    0x27b70a85U,\n"
-"    0x2e1b2138U,\n"
-"    0x4d2c6dfcU,\n"
-"    0x53380d13U,\n"
-"    0x650a7354U,\n"
-"    0x766a0abbU,\n"
-"    0x81c2c92eU,\n"
-"    0x92722c85U,\n"
-"    0xa2bfe8a1U,\n"
-"    0xa81a664bU,\n"
-"    0xc24b8b70U,\n"
-"    0xc76c51a3U,\n"
-"    0xd192e819U,\n"
-"    0xd6990624U,\n"
-"    0xf40e3585U,\n"
-"    0x106aa070U,\n"
-"    0x19a4c116U,\n"
-"    0x1e376c08U,\n"
-"    0x2748774cU,\n"
-"    0x34b0bcb5U,\n"
-"    0x391c0cb3U,\n"
-"    0x4ed8aa4aU,\n"
-"    0x5b9cca4fU,\n"
-"    0x682e6ff3U,\n"
-"    0x748f82eeU,\n"
-"    0x78a5636fU,\n"
-"    0x84c87814U,\n"
-"    0x8cc70208U,\n"
-"    0x90befffaU,\n"
-"    0xa4506cebU,\n"
-"    0xbef9a3f7U,\n"
-"    0xc67178f2U\n"
-"};\n\n"
-"inline uint load_be32(__global const uchar *p, int offset)\n"
-"{\n"
-"    return ((uint)p[offset]     << 24) |\n"
-"           ((uint)p[offset + 1] << 16) |\n"
-"           ((uint)p[offset + 2] <<  8) |\n"
-"            (uint)p[offset + 3];\n"
-"}\n\n"
-"__kernel void sha256_ocl_kernel(__global const uint *message, __global uint *digest)\n"
-"{\n"
-"    size_t gid = get_global_id(0);\n"
-"    __global const uint *msg = message + gid * 8;\n"
-"    __global uint *out       = digest + gid * 8;\n\n"
-"    uint W[64];\n"
-"    uint i;\n\n"
-"    W[0] = load_be32((__global const uchar *)msg, 0);\n"
-"    W[1] = load_be32((__global const uchar *)msg, 4);\n"
-"    W[2] = load_be32((__global const uchar *)msg, 8);\n"
-"    W[3] = load_be32((__global const uchar *)msg, 12);\n"
-"    W[4] = load_be32((__global const uchar *)msg, 16);\n"
-"    W[5] = load_be32((__global const uchar *)msg, 20);\n"
-"    W[6] = load_be32((__global const uchar *)msg, 24);\n"
-"    W[7] = load_be32((__global const uchar *)msg, 28);\n\n"
-"    W[8]  = 0x80000000U;\n"
-"    W[9]  = 0U;\n"
-"    W[10] = 0U;\n"
-"    W[11] = 0U;\n"
-"    W[12] = 0U;\n"
-"    W[13] = 0U;\n"
-"    W[14] = 0U;\n"
-"    W[15] = 256U;\n\n"
-"    for (i = 16; i < 64; ++i)\n"
-"    {\n"
-"        uint s0 = rotate(W[i - 15],  (uint)(32 - 7)) ^ rotate(W[i - 15], (uint)(32 - 18)) ^ (W[i - 15] >>  3);\n"
-"        uint s1 = rotate(W[i -  2], (uint)(32 - 17)) ^ rotate(W[i -  2], (uint)(32 - 19)) ^ (W[i -  2] >> 10);\n"
-"        W[i] = W[i - 16] + s0 + W[i - 7] + s1;\n"
-"    }\n\n"
-"    uint a = H_0[0];\n"
-"    uint b = H_0[1];\n"
-"    uint c = H_0[2];\n"
-"    uint d = H_0[3];\n"
-"    uint e = H_0[4];\n"
-"    uint f = H_0[5];\n"
-"    uint g = H_0[6];\n"
-"    uint h = H_0[7];\n\n"
-"    for (i = 0; i < 64; ++i)\n"
-"    {\n"
-"        uint S1 = rotate(e, (uint)(32 - 6)) ^ rotate(e, (uint)(32 - 11)) ^ rotate(e, (uint)(32 - 25));\n"
-"        uint ch = (e & f) ^ (~e & g);\n"
-"        uint temporary1 = h + S1 + ch + K[i] + W[i];\n"
-"        uint S0 = rotate(a, (uint)(32 - 2)) ^ rotate(a, (uint)(32 - 13)) ^ rotate(a, (uint)(32 - 22));\n"
-"        uint major = (a & b) ^ (a & c) ^ (b & c);\n"
-"        uint temporary2 = S0 + major;\n\n"
-"        h = g;\n"
-"        g = f;\n"
-"        f = e;\n"
-"        e = d + temporary1;\n"
-"        d = c;\n"
-"        c = b;\n"
-"        b = a;\n"
-"        a = temporary1 + temporary2;\n"
-"    }\n\n"
-"    out[0] = H_0[0] + a;\n"
-"    out[1] = H_0[1] + b;\n"
-"    out[2] = H_0[2] + c;\n"
-"    out[3] = H_0[3] + d;\n"
-"    out[4] = H_0[4] + e;\n"
-"    out[5] = H_0[5] + f;\n"
-"    out[6] = H_0[6] + g;\n"
-"    out[7] = H_0[7] + h;\n"
-"}\n";
 
 static GpuContext g_gpu_ctx = {
     .global_work_size = GPU_DEFAULT_GLOBAL_WORK_SIZE,
@@ -336,7 +187,6 @@ static inline cl_int init_gpu(GpuContext *ctx)
         return CL_SUCCESS;
     }
 
-    /* Provide rusticl fallback on systems without proprietary drivers */
     if (!getenv("RUSTICL_ENABLE"))
     {
         setenv("RUSTICL_ENABLE", "llvmpipe", 0);
@@ -359,7 +209,6 @@ static inline cl_int init_gpu(GpuContext *ctx)
     cl_platform_id selected_platform = NULL;
     cl_device_id selected_device     = NULL;
 
-    /* Prefer GPU device first across all platforms */
     for (cl_uint p = 0; p < num_platforms; ++p)
     {
         cl_uint num_devices = 0;
@@ -370,7 +219,6 @@ static inline cl_int init_gpu(GpuContext *ctx)
         }
     }
 
-    /* Fall back to any device type if GPU not found */
     if (!selected_device)
     {
         for (cl_uint p = 0; p < num_platforms; ++p)
@@ -407,10 +255,9 @@ static inline cl_int init_gpu(GpuContext *ctx)
         return err;
     }
 
-    /* Attempt loading kernel source from disk, fallback to embedded string */
     size_t src_size = 0;
     char *file_src = gpu_read_kernel_file("opencl/sha256.cl", &src_size);
-    const char *kernel_code = file_src ? file_src : GPU_SHA256_KERNEL_SRC;
+    const char *kernel_code = file_src;
 
     ctx->program = clCreateProgramWithSource(ctx->context, 1, &kernel_code, NULL, &err);
     if (err != CL_SUCCESS)
@@ -434,7 +281,6 @@ static inline cl_int init_gpu(GpuContext *ctx)
         return err;
     }
 
-    /* Create SHA-256 kernel */
     ctx->kernel = clCreateKernel(ctx->program, "sha256_ocl_kernel", &err);
     if (err != CL_SUCCESS)
     {
@@ -516,10 +362,6 @@ static inline uint32_t *gpu_get_output_digests(void)
     return g_gpu_ctx.host_output;
 }
 
-/*
- * Launch a batch of distinct candidates on the GPU.
- * Each GPU work item evaluates a distinct candidate in parallel.
- */
 static inline cl_int launch_gpu_batch_ex(
     GpuContext *ctx,
     const void *candidates,
@@ -555,7 +397,6 @@ static inline cl_int launch_gpu_batch_ex(
         lws = GPU_DEFAULT_LOCAL_WORK_SIZE;
     }
 
-    /* Calculate global work size rounded to work group size */
     size_t gws;
     if (num_candidates >= ctx->global_work_size)
     {
@@ -566,7 +407,6 @@ static inline cl_int launch_gpu_batch_ex(
         gws = ((num_candidates + lws - 1) / lws) * lws;
     }
 
-    /* If candidates buffer is external, copy into host_input */
     if (candidates && candidates != ctx->host_input)
     {
         size_t copy_bytes = num_candidates * 32;
@@ -575,7 +415,6 @@ static inline cl_int launch_gpu_batch_ex(
             copy_bytes = ctx->global_work_size * 32;
         }
         memcpy(ctx->host_input, candidates, copy_bytes);
-        /* Zero out any remaining padding slots up to gws */
         if (gws > num_candidates)
         {
             memset(ctx->host_input + num_candidates * 32, 0, (gws - num_candidates) * 32);
@@ -615,7 +454,6 @@ static inline cl_int launch_gpu_batch_ex(
         NULL
     );
 
-    /* Fallback if device does not support requested work group size */
     if (err == CL_INVALID_WORK_GROUP_SIZE)
     {
         err = clEnqueueNDRangeKernel(
@@ -672,9 +510,6 @@ static inline cl_int launch_gpu_batch(
     );
 }
 
-/*
- * Base inline function launching GPU kernel for a single candidate.
- */
 static inline cl_int (launch_gpu_kernel)(const char *candidate, size_t length)
 {
     if (!g_gpu_ctx.is_initialized)
