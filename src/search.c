@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "search.h"
@@ -75,6 +76,22 @@ void build_search_space(size_t search_space[], const Topology *argtopo)
     }
 }
 
+int get_space_size(size_t search_space[], size_t topology_len)
+{
+    if (topology_len == 0)
+    {
+        return 0;
+    }
+
+    int product = search_space[0];
+    for (size_t i = 1; i < topology_len; ++i)
+    {
+        product = product * search_space[i];
+    }
+
+    return product;
+}
+
 void run_search(Topology *argtopo)
 {
     size_t topology_len = argtopo->len;
@@ -84,6 +101,9 @@ void run_search(Topology *argtopo)
 
     size_t counter_array[topology_len] = {};
     size_t counter_last_index = topology_len - 1;
+
+    int this_space_size = get_space_size(working_search_space, topology_len);
+    fprintf(stdout, "Processing %d candidates \n", this_space_size);
 
     for (;;)
     {
@@ -103,6 +123,7 @@ void run_search(Topology *argtopo)
 
     char current_prediction[topology_len + 1];
     current_prediction[topology_len] = '\0';
+    unsigned int processed_count = 0;
     for (;;)
     {
         if (counter_array[counter_last_index] >= working_search_space[counter_last_index])
@@ -136,7 +157,6 @@ void run_search(Topology *argtopo)
             }
         }
 
-        /* Populate distinct candidate in work-item slot */
         if (batch_buffer)
         {
             uint8_t *slot = batch_buffer + batch_count * 32;
@@ -145,15 +165,15 @@ void run_search(Topology *argtopo)
         }
         batch_count++;
 
-        /*
-         * Launch GPU tasks in parallel when batch reaches global work size.
-         * Each work item evaluates a distinct candidate.
-         */
         if (batch_count >= batch_capacity)
         {
             launch_gpu_batch(batch_buffer, batch_count, topology_len);
             batch_count = 0;
         }
+
+        processed_count++;
+        unsigned long long int percentage = ((unsigned long long int)processed_count * 100) / (unsigned long long int)this_space_size; 
+        fprintf(stdout, "\e[?25l\rProcessed %d (%llu%%)\e[?25h", processed_count, percentage);
 
         counter_array[0] = counter_array[0] + 1;
         for (size_t rollover_index = 0; rollover_index < counter_last_index; ++rollover_index)
@@ -166,13 +186,11 @@ void run_search(Topology *argtopo)
         }
     }
 
-    /*
-     * Launch remaining distinct candidates in final batch.
-     * Each work item evaluates a distinct candidate.
-     */
     if (batch_count > 0)
     {
         launch_gpu_batch(batch_buffer, batch_count, topology_len);
         batch_count = 0;
     }
+
+    fprintf(stdout, "\n");
 }
