@@ -2,8 +2,18 @@
 #include <bits/getopt_core.h>
 #include <stdio.h>
 #include <getopt.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "driver.h"
+
+/* In case of a crash or interrupt signal */
+void restore_cursor(int sig)
+{
+    fprintf(stdout, "\e[?25h");
+    exit(sig);
+}
 
 int main(int argc, char *argv[])
 {
@@ -35,6 +45,8 @@ int main(int argc, char *argv[])
                 break;
         }
     }
+
+    signal(SIGINT, restore_cursor);
     
     return init_trj(trj_options);
 }
