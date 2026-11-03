@@ -192,5 +192,6 @@ void run_search(Topology *argtopo)
         batch_count = 0;
     }
 
+    /* After progress counter completes */
     fprintf(stdout, "\n");
 }
