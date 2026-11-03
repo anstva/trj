@@ -58,3 +58,6 @@ dkms.conf
 
 # Git
 .cache
+
+# perf
+perf.data
