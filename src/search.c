@@ -173,7 +173,7 @@ void run_search(Topology *argtopo)
 
         processed_count++;
         unsigned long long int percentage = ((unsigned long long int)processed_count * 100) / (unsigned long long int)this_space_size; 
-        fprintf(stdout, "\e[?25l\rProcessed %d (%llu%%)\e[?25h", processed_count, percentage);
+        fprintf(stdout, "\e[?25l\rProcessed %d (%llu%%)", processed_count, percentage);
 
         counter_array[0] = counter_array[0] + 1;
         for (size_t rollover_index = 0; rollover_index < counter_last_index; ++rollover_index)
@@ -193,5 +193,6 @@ void run_search(Topology *argtopo)
     }
 
     /* After progress counter completes */
+    fprintf(stdout, "\e[?25h");
     fprintf(stdout, "\n");
 }
